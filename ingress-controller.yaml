@@ -1,0 +1,161 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "7"
+    field.cattle.io/publicEndpoints: '[{"addresses":["54.81.128.3"],"port":80,"protocol":"TCP","serviceName":"gitlab-o3s:gitlab-nginx-ingress-controller","allNodes":false},{"addresses":["54.81.128.3"],"port":443,"protocol":"TCP","serviceName":"gitlab-o3s:gitlab-nginx-ingress-controller","allNodes":false},{"addresses":["54.81.128.3"],"port":22,"protocol":"TCP","serviceName":"gitlab-o3s:gitlab-nginx-ingress-controller","allNodes":false}]'
+    meta.helm.sh/release-name: gitlab
+    meta.helm.sh/release-namespace: gitlab-o3s
+  creationTimestamp: "2025-06-13T15:46:17Z"
+  generation: 223
+  labels:
+    app: nginx-ingress
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: 1.0.4
+    chart: nginx-ingress-4.0.6
+    component: controller
+    helm.sh/chart: nginx-ingress-4.0.6
+    heritage: Helm
+    release: gitlab
+  name: gitlab-nginx-ingress-controller
+  namespace: gitlab-o3s
+  resourceVersion: "2077720"
+  uid: 0ec8f993-11bb-4e55-bf38-1c9cf2964cd2
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: nginx-ingress
+      component: controller
+      release: gitlab
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        cattle.io/timestamp: "2025-06-14T00:51:59Z"
+        kubectl.kubernetes.io/restartedAt: "2025-06-14T00:40:34-03:00"
+      creationTimestamp: null
+      labels:
+        app: nginx-ingress
+        component: controller
+        release: gitlab
+    spec:
+      containers:
+      - args:
+        - /nginx-ingress-controller
+        - --publish-service=$(POD_NAMESPACE)/gitlab-nginx-ingress-controller
+        - --election-id=ingress-controller-leader
+        - --controller-class=k8s.io/gitlab-nginx
+        - --configmap=$(POD_NAMESPACE)/gitlab-nginx-ingress-controller
+        - --tcp-services-configmap=gitlab-o3s/gitlab-nginx-ingress-tcp
+        - --watch-namespace=$(POD_NAMESPACE)
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: TZ
+          value: America/Sao_Paulo
+        - name: LD_PRELOAD
+          value: /usr/local/lib/libmimalloc.so
+        image: registry.gitlab.com/gitlab-org/cloud-native/mirror/images/ingress-nginx/controller:v1.11.5@sha256:a1cbad75b0a7098bf9325132794dddf9eef917e8a7fe246749a4cea7ff6f01eb
+        imagePullPolicy: IfNotPresent
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /wait-shutdown
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: controller
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 443
+          name: https
+          protocol: TCP
+        - containerPort: 10254
+          name: metrics
+          protocol: TCP
+        - containerPort: 22
+          name: gitlab-shell
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: 300m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 101
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: gitlab-nginx-ingress
+      serviceAccountName: gitlab-nginx-ingress
+      terminationGracePeriodSeconds: 300
+status:
+  availableReplicas: 2
+  conditions:
+  - lastTransitionTime: "2025-06-13T15:46:18Z"
+    lastUpdateTime: "2025-06-14T03:41:09Z"
+    message: ReplicaSet "gitlab-nginx-ingress-controller-685db65fd8" has successfully
+      progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  - lastTransitionTime: "2025-06-14T03:54:51Z"
+    lastUpdateTime: "2025-06-14T03:54:51Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  observedGeneration: 223
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2

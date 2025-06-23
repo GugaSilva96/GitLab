@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gitlab-multi-tls
+  namespace: gitlab-o3s
+spec:
+  secretName: gitlab-multi-tls
+  issuerRef:
+    name: gitlab-issuer  # ← Este já está OK para DNS-01
+    kind: Issuer
+  commonName: gitlab.rancher.pointertech.digital
+  dnsNames:
+    - gitlab.rancher.pointertech.digital
+    - kas.rancher.pointertech.digital
+  duration: 2160h
+  renewBefore: 360h

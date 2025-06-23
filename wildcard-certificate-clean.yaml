@@ -1,0 +1,23 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gitlab-wildcard-tls
+  namespace: gitlab-o3s
+  labels:
+    app: gitlab-wildcard
+    managed-by: manual
+spec:
+  secretName: gitlab-wildcard-tls
+  issuerRef:
+    name: gitlab-issuer
+    kind: Issuer
+  dnsNames:
+  - gitlab.rancher.pointertech.digital
+  - registry.rancher.pointertech.digital
+  - minio.rancher.pointertech.digital
+  - prometheus.rancher.pointertech.digital
+  - grafana.rancher.pointertech.digital
+  - kas.rancher.pointertech.digital
+  usages:
+  - digital signature
+  - key encipherment

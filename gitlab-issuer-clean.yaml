@@ -1,0 +1,29 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: gitlab-issuer
+  namespace: gitlab-o3s
+  labels:
+    app: certmanager-issuer
+    chart: certmanager-issuer-0.2.1
+    heritage: Helm
+    release: gitlab
+spec:
+  acme:
+    email: admin@rancher.pointertech.digital
+    privateKeySecretRef:
+      name: gitlab-acme-key
+    server: https://acme-v02.api.letsencrypt.org/directory
+    solvers:
+    - dns01:
+        route53:
+          accessKeyIDSecretRef:
+            key: access-key-id
+            name: route53-credentials
+          region: us-east-1
+          secretAccessKeySecretRef:
+            key: secret-access-key
+            name: route53-credentials
+      selector:
+        dnsZones:
+        - rancher.pointertech.digital

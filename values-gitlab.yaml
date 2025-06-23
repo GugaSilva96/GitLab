@@ -1,0 +1,314 @@
+# ==============================
+# Global Configuration - HTTPS HABILITADO
+# ==============================
+global:
+  edition: ee
+
+  redis:
+    auth:
+      enabled: false
+
+  psql:
+    host: gitlab-postgresql
+    port: 5432
+    username: postgres  # Usar usuário padrão
+    database: gitlabhq_production
+    password:
+      secret: gitlab-postgresql-password  
+      key: postgresql-postgres-password   
+  
+  hosts:
+    domain: rancher.pointertech.digital
+    gitlab:
+      name: gitlab.rancher.pointertech.digital
+    registry:
+      name: registry.rancher.pointertech.digital
+    minio:
+      name: minio.rancher.pointertech.digital
+    kas:
+      name: kas.rancher.pointertech.digital
+
+  email:
+    from: 'gitlab@rancher.pointertech.digital'
+    display_name: 'GitLab'
+    reply_to: 'noreply@rancher.pointertech.digital'
+
+  time_zone: America/Sao_Paulo
+
+  ingress:
+    enabled: true
+    class: gitlab-nginx
+    configureCertmanager: true
+    annotations:
+      cert-manager.io/issuer: gitlab-issuer
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+      nginx.ingress.kubernetes.io/proxy-connect-timeout: "15"
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    tls:
+      enabled: true
+      secretName: gitlab-tls
+
+  minio:
+    enabled: true
+
+  https: true
+
+# ==============================
+# GitLab Core Services
+# ==============================
+gitlab:
+  webservice:
+    resources:
+      requests:
+        cpu: 300m
+        memory: 1.5Gi
+      limits:
+        cpu: 1
+        memory: 3Gi
+
+  sidekiq:
+    resources:
+      requests:
+        cpu: 150m
+        memory: 800Mi
+      limits:
+        cpu: 500m
+        memory: 1.5Gi
+
+  gitaly:
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: "longhorn"
+
+  gitlab-shell:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
+      limits:
+        cpu: 300m
+        memory: 500Mi
+
+# ==============================
+# Supporting Services
+# ==============================
+registry:
+  enabled: true
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/issuer: gitlab-issuer
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    tls:
+      secretName: registry-tls
+
+gitlab-runner:
+  install: false
+
+gitlab-kas:
+  enabled: true
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/issuer: gitlab-issuer
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    tls:
+      enabled: true  
+      secretName: kas-tls
+
+# ==============================
+# Infrastructure Components
+# ==============================
+minio:
+  persistence:
+    size: 100Gi
+    storageClass: "longhorn"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/issuer: gitlab-issuer
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    tls:
+      secretName: minio-tls
+
+postgresql:
+  install: true
+  auth:
+    postgresPassword: "GitLab123!@#"
+    database: "gitlabhq_production"
+  primary:
+    persistence:
+      enabled: true
+      size: 30Gi
+      storageClass: "longhorn"
+    resources:
+      requests:
+        cpu: 200m
+        memory: 400Mi
+      limits:
+        cpu: 500m
+        memory: 800Mi
+
+# ==============================
+# Nginx Ingress - HTTPS HABILITADO
+# ==============================
+nginx-ingress:
+  enabled: true
+  controller:
+    ingressClassResource:
+      name: gitlab-nginx
+      controllerValue: "k8s.io/gitlab-nginx"
+    service:
+      type: LoadBalancer
+      ports:
+        http: 80
+        https: 443
+    config:
+      proxy-body-size: "0"
+      proxy-read-timeout: "600"
+      proxy-connect-timeout: "15"
+      ssl-redirect: "false"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
+      limits:
+        cpu: 300m
+        memory: 500Mi
+
+# ==============================
+# Certificate Management - HABILITADO
+# ==============================
+installCertmanager: false
+
+certmanager-issuer:
+  enabled: true
+  email: "gustavo.costa@extreme.digital"
+
+# ==============================
+# Monitoring - CORRIGIDO SEM ERRO DE SCHEMA ✅
+# ==============================
+prometheus:
+  install: true
+  
+  server:
+    persistentVolume:
+      enabled: true
+      size: 20Gi
+      storageClass: "longhorn"
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+    retention: "30d"
+    
+    ingress:
+      enabled: true
+      ingressClassName: gitlab-nginx 
+      annotations:
+        cert-manager.io/issuer: gitlab-issuer
+        nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      hosts:
+        - prometheus.rancher.pointertech.digital
+      tls:
+        - secretName: prometheus-tls
+          hosts:
+            - prometheus.rancher.pointertech.digital
+  
+  alertmanager:
+    enabled: true
+    persistentVolume:
+      enabled: true
+      size: 5Gi
+      storageClass: "longhorn"
+    # ✅ INGRESS DESABILITADO - EVITA ERRO DE SCHEMA
+    ingress:
+      enabled: false
+
+grafana:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: "longhorn"
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 200Mi
+    limits:
+      cpu: 300m
+      memory: 500Mi
+  
+  adminUser: admin
+  adminPassword: "GitLabGrafana123!"
+  
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://gitlab-prometheus-server:80
+          access: proxy
+          isDefault: true
+  
+  ingress:
+    enabled: true
+    ingressClassName: gitlab-nginx 
+    annotations:
+      cert-manager.io/issuer: gitlab-issuer
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    hosts:
+      - grafana.rancher.pointertech.digital  # ← CORRETO: Sem "host:"
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.rancher.pointertech.digital
+
+# ==============================
+# Redis Configuration
+# ==============================
+redis:
+  install: true
+  auth:
+    enabled: false
+    # password: "GitLabRedis123!"
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: "longhorn"
+  replica:
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: "longhorn"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 200Mi
+    limits:
+      cpu: 300m
+      memory: 500Mi
+
+# ==============================
+# Security & Performance
+# ==============================
+shared-secrets:
+  enabled: true
+
+rbac:
+  create: true
